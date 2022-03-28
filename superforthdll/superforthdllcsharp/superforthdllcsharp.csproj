@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+    <ApplicationIcon />
+    <StartupObject />
+    <Authors>Michael Wang</Authors>
+    <Product>SuperForth</Product>
+    <PackageId>SuperForth</PackageId>
+    <PackageProjectUrl>https://github.com/TheRealMichaelWang/superforth</PackageProjectUrl>
+    <Win32Resource />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\x64\Release\superforthdll.dll" Link="superforthdll.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
