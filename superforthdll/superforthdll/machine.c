@@ -78,7 +78,7 @@ int free_alloc(machine_t* machine, heap_alloc_t* heap_alloc) {
 	return 1;
 }
 
-static void machine_heap_supertrace(machine_t* machine, heap_alloc_t* heap_alloc) {
+DLLEXPORT void machine_heap_supertrace(machine_t* machine, heap_alloc_t* heap_alloc) {
 	if (heap_alloc->gc_flag)
 		return;
 	heap_alloc->gc_flag = 1;
@@ -96,16 +96,34 @@ static void machine_heap_supertrace(machine_t* machine, heap_alloc_t* heap_alloc
 	}
 }
 
+DLLEXPORT void machine_heap_detrace(machine_t* machine, heap_alloc_t* heap_alloc) {
+	if (!heap_alloc->gc_flag)
+		return;
+	heap_alloc->gc_flag = 0;
+	switch (heap_alloc->trace_mode) {
+	case GC_TRACE_MODE_ALL:
+		for (uint_fast16_t i = 0; i < heap_alloc->limit; i++)
+			if (heap_alloc->init_stat[i])
+				machine_heap_detrace(machine, heap_alloc->registers[i].heap_alloc);
+		break;
+	case GC_TRACE_MODE_SOME:
+		for (uint_fast16_t i = 0; i < heap_alloc->limit; i++)
+			if (heap_alloc->init_stat[i] && heap_alloc->trace_stat[i])
+				machine_heap_detrace(machine, heap_alloc->registers[i].heap_alloc);
+		break;
+	}
+}
+
 static void machine_heap_trace(machine_t* machine, heap_alloc_t* heap_alloc, heap_alloc_t** reset_stack, uint16_t* reset_count) {
 	if (heap_alloc->gc_flag)
 		return;
-
-	heap_alloc->gc_flag = 1;
 	
 	if(*reset_count >= 128) {
 		machine_heap_supertrace(machine, heap_alloc);
 		return;
 	}
+
+	heap_alloc->gc_flag = 1;
 	
 	reset_stack[(*reset_count)++] = heap_alloc;
 	switch (heap_alloc->trace_mode) {
@@ -132,6 +150,7 @@ int init_machine(machine_t* machine, uint16_t stack_size, uint16_t frame_limit) 
 	machine->heap_count = 0;
 	machine->trace_count = 0;
 	machine->freed_heap_count = 0;
+	machine->halt_flag = 0;
 
 	ESCAPE_ON_FAIL(machine->stack = malloc(stack_size * sizeof(machine_reg_t)));
 	ESCAPE_ON_FAIL(machine->positions = malloc(machine->frame_limit * sizeof(machine_ins_t*)));
@@ -165,9 +184,14 @@ DLLEXPORT void free_machine(machine_t* machine) {
 #define MACHINE_ESCAPE_COND(COND) {if(!(COND)) { machine->last_err_ip = ip - instructions; return 0; }}
 #define MACHINE_PANIC(ERR) {machine->last_err_ip = ip - instructions; PANIC(machine, ERR); };
 
-DLLEXPORT int machine_execute(machine_t* machine, machine_ins_t* instructions) {
-	machine_ins_t* ip = instructions;
+DLLEXPORT int machine_execute(machine_t* machine, machine_ins_t* instructions, machine_t* continue_instruction) {
+	machine_ins_t* ip = continue_instruction;
 	for (;;) {
+		if (machine->halt_flag) {
+			machine->last_err_ip = ip;
+			return 1;
+		}
+
 		switch (ip->op_code) {
 		case MACHINE_OP_CODE_MOVE_LL:
 			machine->stack[ip->a + machine->global_offset] = machine->stack[ip->b + machine->global_offset];

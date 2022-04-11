@@ -287,14 +287,14 @@ static int ast_postproc_code_block(ast_parser_t* ast_parser, ast_code_block_t* c
 					ESCAPE_ON_FAIL(ast_postproc_value(ast_parser, current_cond->condition, trace_stats, is_top_level ? ast_parser->top_level_global_gc_stats : global_gc_stats, local_gc_stats, is_top_level ? ast_parser->shared_globals : shared_globals, shared_locals, local_scope_size, POSTPROC_PARENT_IRRELEVANT, parent_proc))
 
 					postproc_gc_status_t* new_gc_context = malloc(local_scope_size * sizeof(postproc_gc_status_t));
-				PANIC_ON_FAIL(new_gc_context, ast_parser, SUPERFORTH_ERROR_MEMORY);
+				PANIC_ON_FAIL(new_gc_context, ast_parser,SUPERFORTH_ERROR_MEMORY);
 				postproc_gc_status_t* new_global_stats = malloc(ast_parser->global_count * sizeof(postproc_gc_status_t));
-				PANIC_ON_FAIL(new_global_stats, ast_parser, SUPERFORTH_ERROR_MEMORY);
+				PANIC_ON_FAIL(new_global_stats, ast_parser,SUPERFORTH_ERROR_MEMORY);
 				memcpy(new_global_stats, is_top_level ? ast_parser->top_level_global_gc_stats : global_gc_stats, ast_parser->global_count * sizeof(postproc_gc_status_t));
 				int* new_shared_locals = malloc(local_scope_size * sizeof(int));
-				PANIC_ON_FAIL(new_shared_locals, ast_parser, SUPERFORTH_ERROR_MEMORY);
+				PANIC_ON_FAIL(new_shared_locals, ast_parser,SUPERFORTH_ERROR_MEMORY);
 				int* new_shared_globals = malloc(ast_parser->global_count * sizeof(int));
-				PANIC_ON_FAIL(new_shared_globals, ast_parser, SUPERFORTH_ERROR_MEMORY);
+				PANIC_ON_FAIL(new_shared_globals, ast_parser,SUPERFORTH_ERROR_MEMORY);
 				memcpy(new_gc_context, local_gc_stats, local_scope_size * sizeof(postproc_gc_status_t));
 				memcpy(new_shared_locals, shared_locals, local_scope_size * sizeof(int));
 				memcpy(new_shared_globals, is_top_level ? ast_parser->shared_globals : shared_globals, ast_parser->global_count * sizeof(int));
@@ -380,6 +380,7 @@ static void share_var_from_value(ast_parser_t* ast_parser, ast_value_t value, in
 }
 
 #define GET_TYPE_TRACE(TYPE) (((TYPE).type == TYPE_TYPEARG) ? typearg_traces[(TYPE).type_id] : IS_REF_TYPE(TYPE))
+#define GET_TYPE_FREE(TYPE) (((TYPE).type != TYPE_TYPEARG) ? IS_REF_TYPE(TYPE) : (typearg_traces[(TYPE).type_id] == POSTPROC_TRACE_DYNAMIC ? POSTPROC_FREE_DYNAMIC : POSTPROC_FREE))
 #define PROC_DO_GC if(parent_proc && value->affects_state) {parent_proc->do_gc = 1;};
 
 static int ast_postproc_value(ast_parser_t* ast_parser, ast_value_t* value, postproc_trace_status_t* typearg_traces, postproc_gc_status_t* global_gc_stats, postproc_gc_status_t* local_gc_stats, int* shared_globals, int* shared_locals, uint16_t local_scope_size, postproc_parent_status_t parent_stat, ast_proc_t* parent_proc) {
@@ -405,14 +406,14 @@ static int ast_postproc_value(ast_parser_t* ast_parser, ast_value_t* value, post
 		break;
 	case AST_VALUE_ALLOC_RECORD: {
 		PROC_DO_GC;
-		PANIC_ON_FAIL(value->data.alloc_record.typearg_traces = malloc((value->data.alloc_record.proto->index_offset + value->data.alloc_record.proto->property_count) * sizeof(postproc_trace_status_t)), ast_parser, SUPERFORTH_ERROR_MEMORY);
+		PANIC_ON_FAIL(value->data.alloc_record.typearg_traces = malloc((value->data.alloc_record.proto->index_offset + value->data.alloc_record.proto->property_count) * sizeof(postproc_trace_status_t)), ast_parser,SUPERFORTH_ERROR_MEMORY);
 
 		typecheck_type_t* current_typeargs = malloc(TYPE_MAX_SUBTYPES * sizeof(typecheck_type_t));
-		PANIC_ON_FAIL(current_typeargs, ast_parser, SUPERFORTH_ERROR_MEMORY);
+		PANIC_ON_FAIL(current_typeargs, ast_parser,SUPERFORTH_ERROR_MEMORY);
 		memcpy(current_typeargs, value->type.sub_types, value->type.sub_type_count * sizeof(typecheck_type_t));
 
 		int* overriden_defaults = calloc(value->data.alloc_record.proto->property_count + value->data.alloc_record.proto->index_offset, sizeof(int));
-		PANIC_ON_FAIL(overriden_defaults, ast_parser, SUPERFORTH_ERROR_MEMORY);
+		PANIC_ON_FAIL(overriden_defaults, ast_parser,SUPERFORTH_ERROR_MEMORY);
 		for (uint_fast8_t i = 0; i < value->data.alloc_record.init_value_count; i++)
 			overriden_defaults[value->data.alloc_record.init_values[i].property->id] = 1;
 
@@ -424,11 +425,11 @@ static int ast_postproc_value(ast_parser_t* ast_parser, ast_value_t* value, post
 					if (value->data.alloc_record.init_value_count == value->data.alloc_record.allocated_init_values) {
 						if (value->data.alloc_record.allocated_init_values) {
 							struct ast_alloc_record_init_value* new_init_values = realloc(value->data.alloc_record.init_values, (value->data.alloc_record.allocated_init_values += 2) * sizeof(struct ast_alloc_record_init_value));
-							PANIC_ON_FAIL(new_init_values, ast_parser, SUPERFORTH_ERROR_MEMORY);
+							PANIC_ON_FAIL(new_init_values, ast_parser,SUPERFORTH_ERROR_MEMORY);
 							value->data.alloc_record.init_values = new_init_values;
 						}
 						else
-							PANIC_ON_FAIL(value->data.alloc_record.init_values = malloc((value->data.alloc_record.allocated_init_values = 5) * sizeof(ast_alloc_record_init_value_t)), ast_parser, SUPERFORTH_ERROR_MEMORY);
+							PANIC_ON_FAIL(value->data.alloc_record.init_values = malloc((value->data.alloc_record.allocated_init_values = 5) * sizeof(ast_alloc_record_init_value_t)), ast_parser,SUPERFORTH_ERROR_MEMORY);
 					}
 					value->data.alloc_record.init_values[value->data.alloc_record.init_value_count++] = (ast_alloc_record_init_value_t){
 						.value = &current_proto->default_values[i].value,
@@ -476,17 +477,17 @@ static int ast_postproc_value(ast_parser_t* ast_parser, ast_value_t* value, post
 		value->gc_status = POSTPROC_GC_NONE;
 
 		postproc_gc_status_t* new_local_stats = malloc(value->data.procedure->scope_size * sizeof(postproc_gc_status_t));
-		PANIC_ON_FAIL(new_local_stats, ast_parser, SUPERFORTH_ERROR_MEMORY);
+		PANIC_ON_FAIL(new_local_stats, ast_parser,SUPERFORTH_ERROR_MEMORY);
 		postproc_gc_status_t* new_global_stats = malloc(ast_parser->global_count * sizeof(int));
-		PANIC_ON_FAIL(new_global_stats, ast_parser, SUPERFORTH_ERROR_MEMORY);
+		PANIC_ON_FAIL(new_global_stats, ast_parser,SUPERFORTH_ERROR_MEMORY);
 		memcpy(new_global_stats, ast_parser->global_gc_stats, ast_parser->global_count * sizeof(postproc_gc_status_t));
 		int* new_shared_locals = calloc(value->data.procedure->scope_size, sizeof(int));
-		PANIC_ON_FAIL(new_shared_locals, ast_parser, SUPERFORTH_ERROR_MEMORY);
+		PANIC_ON_FAIL(new_shared_locals, ast_parser,SUPERFORTH_ERROR_MEMORY);
 		int* new_shared_globals = malloc(ast_parser->global_count * sizeof(int));
-		PANIC_ON_FAIL(new_shared_globals, ast_parser, SUPERFORTH_ERROR_MEMORY);
+		PANIC_ON_FAIL(new_shared_globals, ast_parser,SUPERFORTH_ERROR_MEMORY);
 		memcpy(new_shared_globals, ast_parser->shared_globals, ast_parser->global_count * sizeof(int));
 		postproc_trace_status_t* typearg_traces = malloc(value->type.type_id * sizeof(postproc_trace_status_t));
-		PANIC_ON_FAIL(typearg_traces, ast_parser, SUPERFORTH_ERROR_MEMORY);
+		PANIC_ON_FAIL(typearg_traces, ast_parser,SUPERFORTH_ERROR_MEMORY);
 
 		for (uint_fast8_t i = 0; i < value->type.type_id; i++)
 			typearg_traces[i] = POSTPROC_TRACE_DYNAMIC;
@@ -549,7 +550,7 @@ static int ast_postproc_value(ast_parser_t* ast_parser, ast_value_t* value, post
 				ESCAPE_ON_FAIL(ast_postproc_value(ast_parser, &value->data.set_var->set_value, typearg_traces, global_gc_stats, local_gc_stats, shared_globals, shared_locals, local_scope_size, POSTPROC_PARENT_LOCAL, parent_proc));
 
 			value->gc_status = global_gc_stats[SANITIZE_SCOPE_ID(*value->data.set_var->var_info)] = value->data.set_var->set_value.gc_status;
-			value->data.set_var->free_status = shared_globals[SANITIZE_SCOPE_ID(*value->data.set_var->var_info)] ? POSTPROC_FREE_NONE : GET_TYPE_TRACE(value->data.set_var->var_info->type);
+			value->data.set_var->free_status = shared_globals[SANITIZE_SCOPE_ID(*value->data.set_var->var_info)] ? POSTPROC_FREE_NONE : GET_TYPE_FREE(value->data.set_var->var_info->type);
 			shared_globals[SANITIZE_SCOPE_ID(*value->data.set_var->var_info)] = value->from_var;
 			if (parent_stat != POSTPROC_PARENT_IRRELEVANT)
 				shared_globals[SANITIZE_SCOPE_ID(*value->data.set_var->var_info)] = 1;
@@ -563,7 +564,7 @@ static int ast_postproc_value(ast_parser_t* ast_parser, ast_value_t* value, post
 				ESCAPE_ON_FAIL(ast_postproc_value(ast_parser, &value->data.set_var->set_value, typearg_traces, global_gc_stats, local_gc_stats, shared_globals, shared_locals, local_scope_size, POSTPROC_PARENT_LOCAL, parent_proc));
 
 			value->gc_status = local_gc_stats[SANITIZE_SCOPE_ID(*value->data.set_var->var_info)] = value->data.set_var->set_value.gc_status;
-			value->data.set_var->free_status = shared_locals[SANITIZE_SCOPE_ID(*value->data.set_var->var_info)] ? POSTPROC_FREE_NONE : GET_TYPE_TRACE(value->data.set_var->var_info->type);
+			value->data.set_var->free_status = shared_locals[SANITIZE_SCOPE_ID(*value->data.set_var->var_info)] ? POSTPROC_FREE_NONE : GET_TYPE_FREE(value->data.set_var->var_info->type);
 			shared_locals[SANITIZE_SCOPE_ID(*value->data.set_var->var_info)] = value->from_var;
 			if (parent_stat != POSTPROC_PARENT_IRRELEVANT)
 				shared_locals[SANITIZE_SCOPE_ID(*value->data.set_var->var_info)] = 1;
@@ -628,7 +629,7 @@ static int ast_postproc_value(ast_parser_t* ast_parser, ast_value_t* value, post
 		break;
 	case AST_VALUE_PROC_CALL:
 		ESCAPE_ON_FAIL(ast_postproc_value(ast_parser, &value->data.proc_call->procedure, typearg_traces, global_gc_stats, local_gc_stats, shared_globals, shared_locals, local_scope_size, POSTPROC_PARENT_IRRELEVANT, parent_proc));
-		PANIC_ON_FAIL(value->data.proc_call->typearg_traces = malloc(value->data.proc_call->procedure.type.type_id * sizeof(postproc_trace_status_t)), ast_parser, SUPERFORTH_ERROR_MEMORY);
+		PANIC_ON_FAIL(value->data.proc_call->typearg_traces = malloc(value->data.proc_call->procedure.type.type_id * sizeof(postproc_trace_status_t)), ast_parser,SUPERFORTH_ERROR_MEMORY);
 		if (value->data.proc_call->procedure.type.type_id) {
 			for (uint_fast8_t i = 0; i < value->data.proc_call->procedure.type.type_id; i++)
 				if (value->data.proc_call->typeargs[i].type == TYPE_TYPEARG)
@@ -665,7 +666,7 @@ static int ast_postproc_value(ast_parser_t* ast_parser, ast_value_t* value, post
 
 	if (value->gc_status == POSTPROC_GC_NONE || parent_stat == POSTPROC_PARENT_IRRELEVANT) {
 		if (parent_stat == POSTPROC_PARENT_IRRELEVANT && !value->from_var && value->gc_status == POSTPROC_GC_LOCAL_ALLOC)
-			value->free_status = GET_TYPE_TRACE(value->type);
+			value->free_status = GET_TYPE_FREE(value->type);
 		value->trace_status = POSTPROC_TRACE_NONE;
 		goto no_trace_postproc;
 	}
@@ -729,13 +730,13 @@ int ast_postproc(ast_parser_t* ast_parser) {
 	while (ast_postproc_codeblock_affects_state(&ast_parser->ast->exec_block, 0)) {}
 
 	//allocate memory used for analysis
-	PANIC_ON_FAIL(ast_parser->top_level_global_gc_stats = malloc(ast_parser->global_count * sizeof(postproc_gc_status_t)), ast_parser, SUPERFORTH_ERROR_MEMORY);
-	PANIC_ON_FAIL(ast_parser->global_gc_stats = malloc(ast_parser->global_count * sizeof(postproc_gc_status_t)), ast_parser, SUPERFORTH_ERROR_MEMORY);
+	PANIC_ON_FAIL(ast_parser->top_level_global_gc_stats = malloc(ast_parser->global_count * sizeof(postproc_gc_status_t)), ast_parser,SUPERFORTH_ERROR_MEMORY);
+	PANIC_ON_FAIL(ast_parser->global_gc_stats = malloc(ast_parser->global_count * sizeof(postproc_gc_status_t)), ast_parser,SUPERFORTH_ERROR_MEMORY);
 	postproc_gc_status_t* top_level_locals = malloc(ast_parser->top_level_local_count * sizeof(postproc_gc_status_t));
-	PANIC_ON_FAIL(top_level_locals, ast_parser, SUPERFORTH_ERROR_MEMORY);
-	PANIC_ON_FAIL(ast_parser->shared_globals = calloc(ast_parser->global_count, sizeof(int)), ast_parser, SUPERFORTH_ERROR_MEMORY);
+	PANIC_ON_FAIL(top_level_locals, ast_parser,SUPERFORTH_ERROR_MEMORY);
+	PANIC_ON_FAIL(ast_parser->shared_globals = calloc(ast_parser->global_count, sizeof(int)), ast_parser,SUPERFORTH_ERROR_MEMORY);
 	int* shared_top_level = calloc(ast_parser->top_level_local_count, sizeof(int));
-	PANIC_ON_FAIL(shared_top_level, ast_parser, SUPERFORTH_ERROR_MEMORY);
+	PANIC_ON_FAIL(shared_top_level, ast_parser,SUPERFORTH_ERROR_MEMORY);
 	ESCAPE_ON_FAIL(ast_postproc_code_block(ast_parser, &ast_parser->ast->exec_block, NULL, NULL, top_level_locals, ast_parser->top_level_local_count, NULL, shared_top_level, 1, NULL));
 
 	while (ast_postproc_codeblock_affects_state(&ast_parser->ast->exec_block, 1)) {}

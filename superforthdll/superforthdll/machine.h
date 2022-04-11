@@ -130,6 +130,8 @@ typedef struct machine {
 
 	ffi_t ffi_table;
 	dynamic_library_table_t* dynamic_library_table;
+
+	int halt_flag;
 } machine_t;
 
 int init_machine(machine_t* machine, uint16_t stack_size, uint16_t frame_limit);
@@ -138,4 +140,7 @@ DLLEXPORT void free_machine(machine_t* machine);
 DLLEXPORT int machine_execute(machine_t* machine, machine_ins_t* instructions);
 
 DLLEXPORT heap_alloc_t* machine_alloc(machine_t* machine, uint16_t req_size, gc_trace_mode_t trace_mode);
+
+DLLEXPORT void machine_heap_supertrace(machine_t* machine, heap_alloc_t* heap_alloc);
+DLLEXPORT void machine_heap_detrace(machine_t* machine, heap_alloc_t* heap_alloc);
 #endif // !OPCODE_H
